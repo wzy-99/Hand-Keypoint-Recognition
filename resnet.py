@@ -173,6 +173,8 @@ class ResNetv2(fluid.dygraph.Layer):
     def __init__(self, layers=50, class_dim=1, out_size=7):
         super(ResNetv2, self).__init__()
 
+        self.class_dim = class_dim
+
         self.layers = layers
         supported_layers = [50, 101, 152]
         assert layers in supported_layers, \
@@ -213,7 +215,7 @@ class ResNetv2(fluid.dygraph.Layer):
                 shortcut = True
         self.bottleneck_block = paddle.nn.Sequential(*self.bottleneck_block_list)
 
-        self.out1 = Linear(num_channels * out_size * out_size, 2)
+        self.out1 = Linear(num_channels * out_size * out_size, 2 * class_dim)
 
     def forward(self, inputs):
         y = self.conv(inputs)
@@ -224,6 +226,8 @@ class ResNetv2(fluid.dygraph.Layer):
         y = paddle.flatten(y, 1)
         
         y = self.out1(y)
+
+        y = paddle.reshape(y, (y.shape[0], self.class_dim, 2))
 
         return y
 

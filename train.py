@@ -1,8 +1,8 @@
 import paddle.fluid as fluid
 import numpy as np
 import paddle
-from dataset import TrainDatasetA, TrainDatasetB
-from resnet import ResNet
+from dataset import TrainDataset_v1, TrainDataset_v2
+from resnet import ResNetv1, ResNetv2
 import config
 
 
@@ -17,33 +17,33 @@ def loss_v2(x, label):
 
 
 def train_v1():
-    net = ResNet()
+    net = ResNetv1()
     model = paddle.Model(net)
     # model.load('output/resnet1')
-    train_dataset = TrainDatasetA('./mydata', class_number=config.CLASS_NUMBER)
+    train_dataset = TrainDataset_v1('./mydata', class_number=config.CLASS_NUMBER)
     callback = paddle.callbacks.LRScheduler(by_step=True, by_epoch=False)
     scheduler = paddle.optimizer.lr.LinearWarmup(learning_rate=0.01, warmup_steps=400, start_lr=0, end_lr=0.01, verbose=True)
     # scheduler = paddle.optimizer.lr.CosineAnnealingDecay(learning_rate=0.2, T_max=1600*4, verbose=True)
     optimizer = paddle.optimizer.SGD(learning_rate=scheduler, parameters=model.parameters())
     model.prepare(optimizer, loss_v1)
-    model.fit(train_dataset, batch_size=32, epochs=4, callbacks=callback)
+    model.fit(train_dataset, batch_size=1, epochs=4, callbacks=callback)
     # model.save('output/resnet1')
 
 
 def train_v2():
-    net = ResNet()
+    net = ResNetv2()
     model = paddle.Model(net)
     # model.load('output/resnet1')
-    train_dataset = TrainDatasetA('./mydata', class_number=config.CLASS_NUMBER)
+    train_dataset = TrainDataset_v2('./mydata', class_number=config.CLASS_NUMBER)
     callback = paddle.callbacks.LRScheduler(by_step=True, by_epoch=False)
     scheduler = paddle.optimizer.lr.LinearWarmup(learning_rate=0.01, warmup_steps=400, start_lr=0, end_lr=0.01, verbose=True)
     # scheduler = paddle.optimizer.lr.CosineAnnealingDecay(learning_rate=0.2, T_max=1600*4, verbose=True)
     optimizer = paddle.optimizer.SGD(learning_rate=scheduler, parameters=model.parameters())
     model.prepare(optimizer, loss_v2)
-    model.fit(train_dataset, batch_size=32, epochs=4, callbacks=callback)
+    model.fit(train_dataset, batch_size=1, epochs=4, callbacks=callback)
     # model.save('output/resnet1')
 
 
 
 if __name__ == "__main__":
-    train()
+    train_v2()
