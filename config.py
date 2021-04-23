@@ -4,4 +4,20 @@ SIGMA = 1.7
 INPUT_SIZE = 224
 LABEL_SIZE = 224
 
-CLASS_NUMBER = 1
+MARGIN = 10
+
+ID2LABEL = {
+    0 : 8
+}
+
+LABEL2ID = {
+    '8' : 0
+}
+
+USE_LABEL = [
+    '8'
+]
+
+CLASS_NUMBER = len(USE_LABEL)
+
+DY = 10

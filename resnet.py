@@ -141,7 +141,7 @@ class ResNetv1(fluid.dygraph.Layer):
         self.conv2d_transpose5 = Conv2DTranspose(256, 256, filter_size=4, padding=1, stride=2)
         self.batch_norm5 = BatchNorm(256, act='relu')
         self.out1 = Conv2D(256, class_dim, filter_size=1, stride=1, padding=0)
-        self.out2 = BatchNorm(class_dim)
+        self.out2 = BatchNorm(class_dim, act='sigmoid')
 
     def forward(self, inputs):
         y = self.conv(inputs)
@@ -215,7 +215,7 @@ class ResNetv2(fluid.dygraph.Layer):
                 shortcut = True
         self.bottleneck_block = paddle.nn.Sequential(*self.bottleneck_block_list)
 
-        self.out1 = Linear(num_channels * out_size * out_size, 2 * class_dim)
+        self.out1 = Linear(num_channels * out_size * out_size, 2 * class_dim, act='relu')
 
     def forward(self, inputs):
         y = self.conv(inputs)

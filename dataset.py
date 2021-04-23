@@ -48,44 +48,50 @@ class TrainDataset_v1(Dataset):
             --2.json 
             ...... 
     """
-    def __init__(self, root_path, class_number=1):
+    def __init__(self, root_path, class_number):
         self.root_path = root_path
         self.class_number = class_number
         self.sample = []
-        for file_name in tqdm(os.listdir(self.root_path)):
-            if file_name.endswith('.jpg'):
-                name = file_name.split('.jpg')[0]
+        for image_name in tqdm(os.listdir(self.root_path)):
+            if image_name.endswith('.jpg'):
+                name = image_name.split('.jpg')[0]
                 json_name = name + '.json'
                 json_path = os.path.join(self.root_path, json_name)
-                image_path = os.path.join(self.root_path, file_name)
+                image_path = os.path.join(self.root_path, image_name)
                 if os.path.exists(json_path):
                     with open(json_path, 'r', encoding='UTF-8') as f:
                         json_obj = json.load(f)
                         hand_info = json_obj['hand_info']
-                        hand_num = len(hand_info)
-                        labels = []
                         for hand in hand_info:
                             hand_parts = hand['hand_parts']
-                            # 只选取食指关节点
-                            if '8' in hand_parts:
-                                x = hand_parts['8']['x']
-                                y = hand_parts['8']['y']
-                                c = 0
-                                labels.append([c, x, y])
-                        if len(labels):
-                            self.sample.append({'image_path': image_path, 'labels': labels})
+                            location = hand['location']
+                            width = location['width']
+                            height = location['height']
+                            left = location['left']
+                            top = location['top']
+                            self.sample.append({'image_path': image_path, 'points': hand_parts, 'location': [left, top, width, height]})
 
     def __getitem__(self, idx):
-        image = cv2.imread(self.sample[idx]['image_path'])
-        h, w, c = image.shape
+        image_path = self.sample[idx]['image_path']
+        points = self.sample[idx]['points']
+        x0, y0, w, h = self.sample[idx]['location']
+        image = cv2.imread(image_path)
+        height, width, channel = image.shape
+        x1 = min(x0 + config.MARGIN + w, width - 1)
+        y1 = min(y0 + config.MARGIN + h, height - 1)
+        x0 = max(x0 - config.MARGIN, 0)
+        y0 = max(y0 - config.MARGIN, 0)
+        w = x1 - x0
+        h = y1 - y0
+        dat = image[y0:y1, x0:x1, :]
         label_image = np.zeros((self.class_number, config.LABEL_SIZE, config.LABEL_SIZE), dtype="float32")
-        for lab in self.sample[idx]['labels']:
-            c = lab[0]
-            x = lab[1] * config.LABEL_SIZE / w
-            y = lab[2] * config.LABEL_SIZE / h
+        for lab in config.USE_LABEL:
+            c = config.LABEL2ID[lab]
+            x = (points[lab]['x'] - x0) * config.LABEL_SIZE / w 
+            y = (points[lab]['y'] - y0 + config.DY) * config.LABEL_SIZE / h 
             label_image[c, :, :] = hotmap(label_image[c, :, :], (x, y), config.RADIUS, (config.SIGMA, config.SIGMA))
-        image = transform(image).astype("float32")
-        ret = image, label_image
+        dat = transform(dat).astype("float32")
+        ret = dat, label_image
         return ret
 
     def __len__(self):
@@ -102,45 +108,51 @@ class TrainDataset_v2(Dataset):
             --2.json 
             ...... 
     """
-    def __init__(self, root_path, class_number=1):
+    def __init__(self, root_path, class_number):
         self.root_path = root_path
         self.class_number = class_number
         self.sample = []
-        for file_name in tqdm(os.listdir(self.root_path)):
-            if file_name.endswith('.jpg'):
-                name = file_name.split('.jpg')[0]
+        for image_name in tqdm(os.listdir(self.root_path)):
+            if image_name.endswith('.jpg'):
+                name = image_name.split('.jpg')[0]
                 json_name = name + '.json'
                 json_path = os.path.join(self.root_path, json_name)
-                image_path = os.path.join(self.root_path, file_name)
+                image_path = os.path.join(self.root_path, image_name)
                 if os.path.exists(json_path):
                     with open(json_path, 'r', encoding='UTF-8') as f:
                         json_obj = json.load(f)
                         hand_info = json_obj['hand_info']
-                        hand_num = len(hand_info)
-                        labels = []
                         for hand in hand_info:
                             hand_parts = hand['hand_parts']
-                            # 只选取食指关节点
-                            if '8' in hand_parts:
-                                x = hand_parts['8']['x']
-                                y = hand_parts['8']['y']
-                                c = 0
-                                labels.append([c, x, y])
-                        if len(labels):
-                            self.sample.append({'image_path': image_path, 'labels': labels})
+                            location = hand['location']
+                            width = location['width']
+                            height = location['height']
+                            left = location['left']
+                            top = location['top']
+                            self.sample.append({'image_path': image_path, 'points': hand_parts, 'location': [left, top, width, height]})
 
     def __getitem__(self, idx):
-        image = cv2.imread(self.sample[idx]['image_path'])
-        h, w, c = image.shape
-        label = np.zeros(shape=(self.class_number, 2), dtype='float32')
-        for lab in self.sample[idx]['labels']:
-            c = lab[0]
-            x = lab[1] * config.LABEL_SIZE / w
-            y = lab[2] * config.LABEL_SIZE / h
-            label[c, 0] = x
-            label[c, 1] = y
-        image = transform(image).astype("float32")
-        ret = image, label
+        image_path = self.sample[idx]['image_path']
+        points = self.sample[idx]['points']
+        x0, y0, w, h = self.sample[idx]['location']
+        image = cv2.imread(image_path)
+        height, width, channel = image.shape
+        x1 = min(x0 + config.MARGIN + w, width - 1)
+        y1 = min(y0 + config.MARGIN + h, height - 1)
+        x0 = max(x0 - config.MARGIN, 0)
+        y0 = max(y0 - config.MARGIN, 0)
+        w = x1 - x0
+        h = y1 - y0
+        dat = image[y0:y1, x0:x1, :]
+        label_array = np.zeros(shape=(self.class_number, 2), dtype='float32')
+        for lab in config.USE_LABEL:
+            c = config.LABEL2ID[lab]
+            x = (points[lab]['x'] - x0) * config.LABEL_SIZE / w
+            y = (points[lab]['y'] - y0 + config.DY) * config.LABEL_SIZE / h
+            label_array[c, 0] = x
+            label_array[c, 1] = y
+        dat = transform(x).astype("float32")
+        ret = dat, label_array
         return ret
 
     def __len__(self):
