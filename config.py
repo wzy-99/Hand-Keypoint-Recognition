@@ -1,4 +1,4 @@
-RADIUS = 5
+RADIUS = 3
 SIGMA = 1.7
 
 INPUT_SIZE = 224
@@ -20,4 +20,6 @@ USE_LABEL = [
 
 CLASS_NUMBER = len(USE_LABEL)
 
-DY = 10
+DY = 0
+
+WEIGHT = 10.0

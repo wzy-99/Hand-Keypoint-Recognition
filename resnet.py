@@ -234,5 +234,5 @@ class ResNetv2(fluid.dygraph.Layer):
 
 if __name__ == '__main__':
     with fluid.dygraph.guard():
-        network = ResNetv2(50)
-        paddle.summary(network, (1, 3, 224, 224))
+        network = ResNetv1(50)
+        paddle.summary(network, (1, 3, 512, 512))
