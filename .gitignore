@@ -1,8 +1,10 @@
 /__pycache__
 /mydata
+/myvalid
 /output
 /result
 /test
 /.vscode
 /.git
 gray.jpg
+sen.pickle

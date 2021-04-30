@@ -236,3 +236,10 @@ if __name__ == '__main__':
     with fluid.dygraph.guard():
         network = ResNetv1(50)
         paddle.summary(network, (1, 3, 512, 512))
+
+    # net = ResNetv1(class_dim=1)
+    # model = paddle.Model(net)
+    # model.load('output/resnetv13')
+
+    # for param in model.parameters():
+    #     print(param)
