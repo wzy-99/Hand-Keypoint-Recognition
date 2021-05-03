@@ -3,12 +3,12 @@ import paddle
 import cv2
 import config
 from dataset import TestDataset
-from resnet import ResNetv1, ResNetv2
+from resnet import ResNet
 
 
-def predict_v1():
+def predict():
     testdataset = TestDataset('test')
-    net = ResNetv1(class_dim=config.CLASS_NUMBER)
+    net = ResNet(class_dim=config.CLASS_NUMBER)
     model = paddle.Model(net)
     model.load('output/resnetv11')
     model.prepare()
@@ -24,11 +24,9 @@ def predict_v1():
         max_value = res.max()
         mean_value = res.mean()
         print('min max mean', min_value, max_value, mean_value)
-        # res = res - min_value
         img = cv2.imread(image_path)
         h, w, c = img.shape
-        img = cv2.circle(img, (int(x * w / 224), int(y * h / 224)), 5, (0, 0, 255), -1)
-        # res = res / max_value * 254
+        img = cv2.circle(img, (int(x * w / config.LABEL_SIZE), int(y * h / config.LABEL_SIZE)), 5, (0, 0, 255), -1)
         res = res * 255
         res = res.astype(np.uint8)
         cv2.imwrite('result/' + str(index) + 'result.jpg', res)
@@ -36,4 +34,4 @@ def predict_v1():
 
 
 if __name__ == '__main__':
-    predict_v1()
+    predict()

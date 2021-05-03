@@ -82,13 +82,12 @@ class BottleneckBlock(fluid.dygraph.Layer):
 
         return y
 
-
-class ResNetv1(fluid.dygraph.Layer):
+class ResNet(fluid.dygraph.Layer):
     """
         输出Hotmap
     """
     def __init__(self, layers=50, class_dim=1):
-        super(ResNetv1, self).__init__()
+        super(ResNet, self).__init__()
 
         self.layers = layers
         supported_layers = [50, 101, 152]
@@ -143,6 +142,7 @@ class ResNetv1(fluid.dygraph.Layer):
         self.out1 = Conv2D(256, class_dim, filter_size=1, stride=1, padding=0)
         self.out2 = BatchNorm(class_dim, act='sigmoid')
 
+    # @paddle.jit.to_static
     def forward(self, inputs):
         y = self.conv(inputs)
         y = self.pool2d_max(y)
@@ -156,9 +156,9 @@ class ResNetv1(fluid.dygraph.Layer):
         y = self.conv2d_transpose3(y)
         y = self.batch_norm3(y)
         y = self.conv2d_transpose4(y)
-        y = self.batch_norm3(y)
-        y = self.conv2d_transpose4(y)
-        y = self.batch_norm3(y)
+        y = self.batch_norm4(y)
+        y = self.conv2d_transpose5(y)
+        y = self.batch_norm5(y)
         
         y = self.out1(y)
         y = self.out2(y)
@@ -166,80 +166,13 @@ class ResNetv1(fluid.dygraph.Layer):
         return y
 
 
-class ResNetv2(fluid.dygraph.Layer):
-    """
-        输出二维坐标
-    """
-    def __init__(self, layers=50, class_dim=1, out_size=7):
-        super(ResNetv2, self).__init__()
-
-        self.class_dim = class_dim
-
-        self.layers = layers
-        supported_layers = [50, 101, 152]
-        assert layers in supported_layers, \
-            "supported layers are {} but input layer is {}".format(supported_layers, layers)
-
-        if layers == 50:
-            depth = [3, 4, 6, 3]
-        elif layers == 101:
-            depth = [3, 4, 23, 3]
-        elif layers == 152:
-            depth = [3, 8, 36, 3]
-        num_filters = [64, 128, 256, 512]
-
-        self.conv = ConvBNLayer(
-            num_channels=3,
-            num_filters=64,
-            filter_size=7,
-            stride=2,
-            act='relu')
-        self.pool2d_max = Pool2D(
-            pool_size=3,
-            pool_stride=2,
-            pool_padding=1,
-            pool_type='max')
-
-        self.bottleneck_block_list = []
-        num_channels = 64
-        for block in range(len(depth)):
-            shortcut = False
-            for i in range(depth[block]):
-                bottleneck_block = BottleneckBlock(
-                    num_channels=num_channels,
-                    num_filters=num_filters[block],
-                    stride=2 if i == 0 and block != 0 else 1,
-                    shortcut=shortcut)
-                num_channels = bottleneck_block._num_channels_out
-                self.bottleneck_block_list.append(bottleneck_block)
-                shortcut = True
-        self.bottleneck_block = paddle.nn.Sequential(*self.bottleneck_block_list)
-
-        self.out1 = Linear(num_channels * out_size * out_size, 2 * class_dim, act='relu')
-
-    def forward(self, inputs):
-        y = self.conv(inputs)
-        y = self.pool2d_max(y)
-
-        y = self.bottleneck_block(y)
-
-        y = paddle.flatten(y, 1)
-        
-        y = self.out1(y)
-
-        y = paddle.reshape(y, (y.shape[0], self.class_dim, 2))
-
-        return y
-
-
 if __name__ == '__main__':
     with fluid.dygraph.guard():
-        network = ResNetv1(50)
+        network = ResNet(50)
         paddle.summary(network, (1, 3, 512, 512))
 
-    # net = ResNetv1(class_dim=1)
+    # net = ResNet(class_dim=1)
     # model = paddle.Model(net)
-    # model.load('output/resnetv13')
-
+    # model.load('output/resnet1')
     # for param in model.parameters():
     #     print(param)
