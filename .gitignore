@@ -7,5 +7,5 @@
 /.vscode
 /.git
 gray.jpg
-sen.pickle
+*.pickle
 /model

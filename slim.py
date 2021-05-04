@@ -4,6 +4,7 @@ from paddle.vision.transforms import Compose, Resize, Transpose, Normalize
 from paddleslim.dygraph import L1NormFilterPruner
 from paddleslim.analysis import dygraph_flops
 from resnet import ResNet
+from unet import Unet
 from dataset import TrainDataset
 import config
 
@@ -18,30 +19,35 @@ transform = Compose([
 def loss(x, label):
     loss = x - label
     loss = 0.5 * loss * loss
-    loss = loss * (label > 0).astype('float32')
+    # loss = loss * (label > 0.5).astype('float32')
+    loss = loss * paddle.exp(config.WEIGHT * label)
     loss = paddle.mean(loss)
     return loss
 
 
 def slim():
-    net = ResNet(class_dim=config.CLASS_NUMBER)
+    # net = ResNet(class_dim=config.CLASS_NUMBER)
+    net = Unet(class_number=config.CLASS_NUMBER)
 
-    # state, _ = fluid.load_dygraph('output/resnetv13')
-    state, _ = fluid.load_dygraph('output/slimmodel')
+    model = paddle.Model(net)
 
-    net.set_state_dict(state)
+    # model.load('output/resnet2')
+    model.load('output/unet1')
+    model.prepare(loss=loss)
 
     for param in net.parameters():
-        print(param.shape)
-
-    # model = paddle.Model(net)
-    # model.load('output/resnetv13')
-    # model.prepare(loss=loss)
-    # model.prepare()
+        print(param.name, param.shape)
 
     paddle.summary(net, (1, 3, config.INPUT_SIZE, config.INPUT_SIZE))
 
-    pruner = L1NormFilterPruner(net, [1, 3, config.INPUT_SIZE, config.INPUT_SIZE], "./sen.pickle")
+    flop, flops = dygraph_flops(net, [1, 3, config.INPUT_SIZE, config.INPUT_SIZE], detail=True)
+    print('flop', flop)
+    for k, v in flops.items():
+        print(k, v)
+
+    print('\n' * 5)
+
+    pruner = L1NormFilterPruner(net, [1, 3, config.INPUT_SIZE, config.INPUT_SIZE], "./usen.pickle")
     # pruner = L1NormFilterPruner(net, [1, 3, config.INPUT_SIZE, config.INPUT_SIZE])
 
     # valid_dataset = TrainDataset('./myvalid')
@@ -57,28 +63,23 @@ def slim():
 
     # print(pruner.sensitive())
 
-    flops = dygraph_flops(net, [1, 3, config.INPUT_SIZE, config.INPUT_SIZE])
-    print(f"FLOPs before pruning: {flops}")
+    plan = pruner.sensitive_prune(0.6, skip_vars=['conv2d_18.w_0'])
+    # print(f"plan: {plan}")
 
-    plan = pruner.sensitive_prune(0.4)
-    print(f"plan: {plan}")
+    for param in net.parameters():
+        print(param.name, param.shape)
 
-    flops = dygraph_flops(net, [1, 3, config.INPUT_SIZE, config.INPUT_SIZE])
-    print(f"FLOPs after pruning: {flops}")
-
+    flop, flops = dygraph_flops(net, [1, 3, config.INPUT_SIZE, config.INPUT_SIZE], detail=True)
+    print('flop', flop)
+    for k, v in flops.items():
+        print(k, v)
+    
     paddle.summary(net, (1, 3, config.INPUT_SIZE, config.INPUT_SIZE))
-
+    
     # result = model.evaluate(valid_dataset, batch_size=1, log_freq=10)
     # print(f"after fine-tuning: {result}")
 
-    # model.save('output/slimmodel')
-
-    for param in net.parameters():
-        print(param.shape)
-
-    state_dict = net.state_dict()
-
-    # paddle.save(state_dict, "paddle_dy.pdparams")
+    model.save('output/inference_model')
 
 if __name__ == '__main__':
     slim()
